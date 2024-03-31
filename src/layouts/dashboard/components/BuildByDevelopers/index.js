@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleMap, LoadScript, Marker, useLoadScript } from '@react-google-maps/api';
+import { GoogleMap, LoadScript, Marker, useLoadScript, DirectionsRenderer } from '@react-google-maps/api';
 
 import PropTypes from 'prop-types';
 
@@ -19,13 +19,15 @@ function GoogleMapsComponent({ handlePlaceChange }) {
   let i = 0
 
   const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: 'AIzaSyBGsjsehQcsQTzWDWwSWSTRlCVR43GkyoQ',
+    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
     libraries,
   });
   const [currentLocation, setCurrentLocation] = useState(defaultCenter);
   const mapRef = useRef(null);
 
   const [places, setPlaces] = useState([])
+
+  const [directionsResponse, setDirectionsResponse] = useState(null);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -105,16 +107,6 @@ function GoogleMapsComponent({ handlePlaceChange }) {
         <Marker position={currentLocation} />
 
         {
-        //   places.map((place) => (
-        //   // <Marker key={place.place_id} position={place.geometry.location} />
-        //   <Marker key={place.place_id + i++} 
-        //   position={place.geometry.location}
-        //   icon={{
-        //     url: process.env.PUBLIC_URL + '/icons/' + place.wCategoryName  + '.png',
-        //     scaledSize: new window.google.maps.Size(24, 24), // Adjust the size as needed
-        //   }}
-        //   />
-        // ))
 
         places.map((place, index) => (
           <Marker 
@@ -129,6 +121,8 @@ function GoogleMapsComponent({ handlePlaceChange }) {
         
 
         }
+
+      {directionsResponse && <DirectionsRenderer directions={directionsResponse} />}
 
     </GoogleMap>
   );
@@ -152,6 +146,23 @@ function calculateDistance(from, to) {
   return distance;
 }
 
+function calculateRoute(from, to) {
+  const directionsService = new window.google.maps.DirectionsService();
+  directionsService.route(
+    {
+      origin: from,
+      destination: { lat: to.lat(), lng: to.lng() },
+      travelMode: window.google.maps.TravelMode.DRIVING,
+    },
+    (result, status) => {
+      if (status === window.google.maps.DirectionsStatus.OK) {
+        setDirectionsResponse(result);
+      } else {
+        console.error(`Error fetching directions ${result}`);
+      }
+    }
+  );
+};
 
 
 GoogleMapsComponent.propTypes = {
@@ -163,114 +174,5 @@ export default GoogleMapsComponent;
 
 
 
-// import React, { useState, useEffect, useRef } from 'react';
-// import { GoogleMap, LoadScript, Marker, useLoadScript } from '@react-google-maps/api';
 
-// import PropTypes from 'prop-types';
-
-// const mapContainerStyle = {
-//   height: '400px',
-//   width: '100%',
-// };
-
-// const defaultCenter = { lat: -34.397, lng: 150.644 };
-// const defaultZoom = 15;
-
-// const libraries = ['places'];
-
-// const shopTypes = ['Nike', 'Starbucks', 'Adidas', 'Walmart'];
-
-// function GoogleMapsComponent({handlePlaceChange}) {
-//   const { isLoaded, loadError } = useLoadScript({
-//     googleMapsApiKey: 'AIzaSyBGsjsehQcsQTzWDWwSWSTRlCVR43GkyoQ',
-//     libraries,
-//   });
-//   const [currentLocation, setCurrentLocation] = useState(defaultCenter);
-//   const [places, setPlaces] = useState([]);
-//   const mapRef = useRef(null);
-
-//   const onMapLoad = (map) => {
-//     mapRef.current = map;
-//     if (navigator.geolocation) {
-//       navigator.geolocation.getCurrentPosition(
-//         (position) => {
-//           const pos = {
-//             lat: position.coords.latitude,
-//             lng: position.coords.longitude,
-//           };
-//           setCurrentLocation(pos);
-//           mapRef.current.setCenter(pos);
-
-//           const service = new window.google.maps.places.PlacesService(mapRef.current);
-//           service.nearbySearch(
-//             {
-//               location: pos,
-//               radius: '3000',
-//               type: ['cafe'],
-//               keyword: 'Starbucks',
-//             },
-//             (results, status) => {
-//               if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-//                 setPlaces(results);
-//                 handlePlaceChange(results)
-//               }
-//             }
-//           );
-//         },
-//         () => {
-//           alert('The Geolocation service failed.');
-//         }
-//       );
-//     } else {
-//       // Browser doesn't support Geolocation
-//       alert("Your browser doesn't support geolocation.");
-//     }
-//   };
-
-//   if (loadError) return <div>Error loading maps</div>;
-//   if (!isLoaded) return <div>Loading Maps</div>;
-
-//   return (
-//     <GoogleMap
-//       mapContainerStyle={mapContainerStyle}
-//       zoom={defaultZoom}
-//       center={currentLocation}
-//       onLoad={onMapLoad}
-//     >
-      // {/* Marker for Current Location */}
-      // <Marker position={currentLocation} />
-
-      // {/* Markers for Starbucks Locations */}
-      // {places.map((place) => (
-      //   // <Marker key={place.place_id} position={place.geometry.location} />
-      //   <Marker key={place.place_id} 
-      //   position={place.geometry.location}
-      //   icon={{
-      //     url: process.env.PUBLIC_URL + '/icons/starbucks.png',
-      //     scaledSize: new window.google.maps.Size(24, 24), // Adjust the size as needed
-      //   }}
-      //   />
-      // ))}
-//     </GoogleMap>
-//   );
-// }
-
-// // Wrap the component with LoadScript for places library loading
-// function WrappedMapComponent({handlePlaceChange}) {
-//   return (
-//     <LoadScript googleMapsApiKey="AIzaSyBGsjsehQcsQTzWDWwSWSTRlCVR43GkyoQ" libraries={libraries}>
-//       <GoogleMapsComponent handlePlaceChange={handlePlaceChange}/>
-//     </LoadScript>
-//   );
-// }
-
-// GoogleMapsComponent.propTypes = {
-//   handlePlaceChange: PropTypes.func.isRequired,
-// };
-
-// WrappedMapComponent.propTypes = {
-//   handlePlaceChange: PropTypes.func.isRequired,
-// }
-
-// export default WrappedMapComponent;
 
